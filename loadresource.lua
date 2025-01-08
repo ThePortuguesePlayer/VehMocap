@@ -33,7 +33,7 @@ function toggleRecording(playerSource)
         outputChatBox("The recording has stopped. Saving file to " .. fullPath .. "..." )
         local success = exportFile(fullPath)
         if success then
-            outputChatBox(fileName .. " has been saved.")
+            outputChatBox(success .. " has been saved.")
         else
             outputChatBox("No file has been generated.")
         end
@@ -121,11 +121,11 @@ function saveKeyframeAutomobile()
     end
     if reversing then
         --vehVel = - math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z)
-        vehVel = -Vector3( getElementVelocity(vehicle) ).length
+        vehVel = -velocity.length
         state = "R"
     else
         --vehVel = math.sqrt(velocity.x * velocity.x + velocity.y * velocity.y + velocity.z * velocity.z)
-        vehVel = Vector3( getElementVelocity(vehicle) ).length
+        vehVel = velocity.length
     end
     if state == nil then
         if isAccelerating() then
