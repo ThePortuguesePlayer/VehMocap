@@ -203,8 +203,8 @@ end
 
 -- HANDLERS ---------------
 
-addEventHandler ( "onClientPlayerVehicleEnter", localPlayer, init )
-addEventHandler ( "onClientPlayerVehicleExit", localPlayer, playerHasExited)
+addEventHandler ("onClientPlayerVehicleEnter", localPlayer, init)
+addEventHandler ("onClientPlayerVehicleExit", localPlayer, playerHasExited)
 addEventHandler("onClientRender", root, recordKeyframe) 
 addCommandHandler("s", toggleRecording)
 addCommandHandler("kfps", setKeyframesPerSecond)
