@@ -1,6 +1,6 @@
 # VehMocap
 
-Vehicle Motion Capture (VehMocap for short) is a MTA:SA resource for capturing the movement of vehicles ingame as animation and saving it as JSON files that can be used to playback said animation in 3D software (such as Blender) or within MTA:SA itself.\
+Vehicle Motion Capture (VehMocap for short) is a MTA:SA resource for capturing the movement of vehicles ingame as animation and saving it as JSON files that can be used to playback said animation in 3D software (such as Blender) or within MTA:SA itself.
 
 
 At the current development state, only the recording of standard cars being driven by the player is supported.
