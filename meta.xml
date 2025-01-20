@@ -1,4 +1,4 @@
 <meta>
-    <info author="MatthewChow" name="Vehicle Motion Capture" description="Motion capture script for vehicles. Exports the animations as JSON files." version="1.0.2" type="script" />
+    <info author="MatthewChow" name="Vehicle Motion Capture" description="Motion capture script for vehicles. Exports the animations as JSON files." version="1.1.0" type="script" />
     <script src="loadresource.lua" type="client" />
 </meta>
