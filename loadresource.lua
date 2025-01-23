@@ -8,9 +8,13 @@ local logTable = {}
 local isRecording = false
 local firstSave
 local lastSave
-local settings = {recordDriver = false, recordCamera = true, msPerKeyframe = 33, filePath = "./captures/"}
+local settings = {recordDriver = false, recordCamera = true, msPerKeyframe = 33, filePath = "./captures/", memUseRefresh = 2000, showLabel = true}
 local frameCount = 0
 local vehType = "Automobile"
+local resMemUse
+local lastMemRefresh
+local screenX
+local labelColor = 0xFFFFFFFF
 
 function init()
     outputChatBox("Vehicle Motion Capture activated.")
@@ -22,6 +26,9 @@ function clearData()
     logTable = {}
     lastSave = nil
     firstSave = nil
+    resMemUse = nil
+    lastMemRefresh = nil
+    collectgarbage("collect")
 end
 
 -- CAPTURE MANAGEMENT FUNCTIONS ------
@@ -40,6 +47,9 @@ function toggleRecording(playerSource)
         end
         clearData()
     elseif isPedInVehicle(localPlayer) then
+        refreshMemoryUsage(getTickCount())
+        screenX = guiGetScreenSize()
+        screenX = screenX/2-40
         isRecording = startRecording()
         if isRecording then 
             outputChatBox("The recording process has started. Saving keyframes every " .. settings.msPerKeyframe .. "ms. (" .. math.floor(1000/settings.msPerKeyframe) .. "fps)")
@@ -51,11 +61,12 @@ end
 
 function recordKeyframe()
     if isRecording then
+        local tick = getTickCount()
         if lastSave == nil then
-            firstSave = getTickCount()
+            firstSave = tick
             lastSave = firstSave
         end
-        local frameTime = getTickCount() - lastSave
+        local frameTime = tick - lastSave
         if frameTime >= settings.msPerKeyframe then
             frameID = tostring(frameCount)
             if vehType == "Automobile" then
@@ -69,7 +80,28 @@ function recordKeyframe()
                 logTable[frameID]["P"] = saveKeyframeDriver(localPlayer)
             end
         end
+        if (tick - lastMemRefresh) >= settings.memUseRefresh then
+            refreshMemoryUsage(tick)
+        end
+        if settings.showLabel == true then
+            drawMemoryUsage()
+        end
     end
+end
+
+function refreshMemoryUsage(tick)
+    resMemUse = collectgarbage("count")
+    lastMemRefresh = tick
+    if labelColor == 0xFFFFFFFF then
+        labelColor = 0xFFFF0000
+    else
+        labelColor = 0xFFFFFFFF
+    end
+end
+
+function drawMemoryUsage()
+    local mb = string.sub(tostring(resMemUse * 0.001), 1, 5)
+    dxDrawText("RECORDING\n"..mb.." MB", screenX, 8, screenX+80, 42, labelColor, 1.0, "unifont", "center", "top", false, false, true)
 end
 
 function playerHasExited()
@@ -120,20 +152,24 @@ end
 -- CAPTURE TYPES ----------------
 
 function saveKeyframeDriver(driver)
-    boneIDs = {
+    local driverPX, driverPY, driverPZ = getElementPosition(driver)
+    local driverRX, driverRY, driverRZ = getElementRotation(driver)
+    local boneIDs = {
         0, 1, 2, 3, 4, 5, 6, 7, 8, 21,
         22, 23, 24, 25, 26, 31, 32, 33,
         34, 35, 36, 41, 42, 43, 44, 51,
         52, 53, 54, 201, 301, 302
     }
-    local bonesTable = {}
-    for _, id in pairs(boneIDs) do 
-        local boneMatrix = getElementBoneMatrix(driver, id)
-        if boneMatrix then
-            -- extract position and rotation from the matrix
-            local posX, posY, posZ = boneMatrix[4][1], boneMatrix[4][2], boneMatrix[4][3]
-            local rotX, rotY, rotZ = math.deg(math.asin(-boneMatrix[3][2])), math.deg(math.atan2(boneMatrix[3][1], boneMatrix[3][3])), math.deg(math.atan2(boneMatrix[1][2], boneMatrix[2][2]))
-            bonesTable[id] = {pX = posX, pY = posY, pZ = posZ, rX = rotX, rY = rotY, rZ = rotZ}
+    local bonesTable = {P = {pX = driverPX, pY = driverPY, pZ = driverPZ, rX = driverRX, rY = driverRY, rZ = driverRZ}}
+    for idx, id in pairs(boneIDs) do 
+        local posX, posY, posZ = getElementBonePosition(driver, id)
+        if idx >= 30 then
+            local boneMatrix = getElementBoneMatrix(driver, id)
+            local rotX, rotY, rotZ = math.asin(-boneMatrix[3][2]), math.atan2(boneMatrix[3][1], boneMatrix[3][3]), math.atan2(boneMatrix[1][2], boneMatrix[2][2])
+            bonesTable[id] = {pX = posX-driverPX, pY = posY-driverPY, pZ = posZ-driverPZ, rX = rotX, rY = rotY, rZ = rotZ}
+        else
+            local rotX, rotY, rotZ, rotW = getElementBoneQuaternion(driver, id)
+            bonesTable[id] = {pX = posX-driverPX, pY = posY-driverPY, pZ = posZ-driverPZ, rX = rotX, rY = rotY, rZ = rotZ, rW = rotW}
         end
     end
     return bonesTable
@@ -198,7 +234,7 @@ end
 -- HELPER FUNCTIONS ---------
 
 function getInfo()
-    info = {
+    local info = {
         ["kfPS"] = math.floor(1000 / settings.msPerKeyframe), -- keyframes Per Second
         ["vN"] = getVehicleName(vehicle),
         ["d"] = (lastSave - firstSave) * 0.001, -- duration time in seconds
@@ -322,6 +358,14 @@ function setKeyframesPerSecond(playerSource, fps)
     settings.msPerKeyframe = math.floor(1000/tonumber(fps))
 end
 
+function setMemRefreshRate(playerSource, value)
+    settings.memUseRefresh = tonumber(value)
+end
+
+function setShowLabel(playerSource)
+    settings.showLabel = not settings.showLabel
+end
+
 function includeDriver(playerSource)
     if settings.recordDriver == true then
         settings.recordDriver = false
@@ -352,4 +396,6 @@ addCommandHandler("kfps", setKeyframesPerSecond)
 addCommandHandler("folder", setSavePath)
 addCommandHandler("driver", includeDriver)
 addCommandHandler("camera", includeCamera)
+addCommandHandler("memory", setShowLabel)
+addCommandHandler("memrefresh", setMemRefreshRate)
 bindKey("num_mul", "up", toggleRecording)
