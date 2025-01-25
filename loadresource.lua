@@ -2,13 +2,21 @@
 -- VEHICLE MOTION CAPTURE --
 ----------------------------
 
+local settings = {
+    recordDriver = false, 
+    recordCamera = true, 
+    msPerKeyframe = 33, 
+    filePath = "./captures/", 
+    memUseRefresh = 2000, 
+    showLabel = true, 
+    eulerMode = false,
+}
 local localPlayer = getLocalPlayer() 
 local vehicle 
 local logTable = {}
 local isRecording = false
 local firstSave
 local lastSave
-local settings = {recordDriver = false, recordCamera = true, msPerKeyframe = 33, filePath = "./captures/", memUseRefresh = 2000, showLabel = true}
 local frameCount = 0
 local vehType = "Automobile"
 local resMemUse
@@ -167,9 +175,12 @@ function saveKeyframeDriver(driver)
             local boneMatrix = getElementBoneMatrix(driver, id)
             local rotX, rotY, rotZ = math.asin(-boneMatrix[3][2]), math.atan2(boneMatrix[3][1], boneMatrix[3][3]), math.atan2(boneMatrix[1][2], boneMatrix[2][2])
             bonesTable[id] = {pX = posX-driverPX, pY = posY-driverPY, pZ = posZ-driverPZ, rX = rotX, rY = rotY, rZ = rotZ}
-        else
+        elseif settings.eulerMode == false then
             local rotX, rotY, rotZ, rotW = getElementBoneQuaternion(driver, id)
             bonesTable[id] = {pX = posX-driverPX, pY = posY-driverPY, pZ = posZ-driverPZ, rX = rotX, rY = rotY, rZ = rotZ, rW = rotW}
+        else
+            local rotX, rotY, rotZ = getElementBoneRotation(driver, id)
+            bonesTable[id] = {pX = posX-driverPX, pY = posY-driverPY, pZ = posZ-driverPZ, rX = rotX, rY = rotY, rZ = rotZ}
         end
     end
     return bonesTable
@@ -243,6 +254,7 @@ function getInfo()
     }
     if settings.recordDriver == true then
         info["pM"] = getDriverSkin(localPlayer)
+        info["rM"] = settings.eulerMode and "E" or "Q"
     end
     return info
 end
@@ -386,6 +398,16 @@ function includeCamera(playerSource)
     end
 end
 
+function setEulerMode(playerSource)
+    if settings.eulerMode == true then
+        settings.eulerMode = false
+        outputChatBox("Capture of bone rotations set to Quaternion mode.")
+    else
+        settings.eulerMode = true
+        outputChatBox("Capture of bone rotations set to Euler mode.")
+    end
+end
+
 -- HANDLERS ---------------
 
 addEventHandler ("onClientPlayerVehicleEnter", localPlayer, init)
@@ -398,4 +420,6 @@ addCommandHandler("driver", includeDriver)
 addCommandHandler("camera", includeCamera)
 addCommandHandler("memory", setShowLabel)
 addCommandHandler("memrefresh", setMemRefreshRate)
+addCommandHandler("rotmode", setEulerMode)
+addCommandHandler("euler", setEulerMode)
 bindKey("num_mul", "up", toggleRecording)
